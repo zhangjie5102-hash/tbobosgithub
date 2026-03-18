@@ -171,3 +171,64 @@
 - 滤镜条横向滚动 + 选中高亮动画。
 - 快门按钮增加按压缩放反馈 + 触觉反馈。
 - 按 `width >= 430` 自动切换为“大屏布局参数”，适配 iPhone 17 Pro Max。
+
+
+## 11. 双镜头导演模式（适配 iPhone 17 Pro Max）
+
+新增代码骨架：
+
+- `MultiCamService.swift`：封装双机位状态、前后画面比例调节、同录状态。
+- `ContentView.swift`：新增“导演模式 / 双机位”交互区，支持前置画面占比与后置画面缩放滑杆。
+
+### 11.1 目标体验
+
+- 在 iPhone 17 Pro Max 上启用前后摄同时取景/同录。
+- 支持用户手动调节：
+  - 前置画面占比（PIP 大小）
+  - 后置主画面缩放比例
+- 适合毕业照场景下的“导演视角 + 被拍者表情同步记录”。
+
+### 11.2 当前代码骨架已覆盖
+
+- `AVCaptureMultiCamSession.isMultiCamSupported` 能力判断。
+- 双机位开关状态管理。
+- 同录开始/停止按钮状态。
+- 前后镜头画面比例滑杆。
+- 右上角 PIP 预览卡片 UI。
+
+> 说明：当前仓库仍是“可落地代码骨架”，若要真正完成前后摄同时写文件，需要在 Xcode 工程中继续接入 `AVCaptureMultiCamSession` 的 video/audio input、两个 output 与 file writer 流程。
+
+## 12. 用户管理与付费模块（App Store 包月 / 包年）
+
+新增代码骨架：
+
+- `SubscriptionStore.swift`：基于 **StoreKit 2** 的自动续订订阅管理。
+- `UserAccountStore.swift`：本地用户资料与席位状态管理骨架。
+- `ContentView.swift`：新增会员入口、订阅弹层、恢复购买、权益态展示。
+
+### 12.1 推荐订阅商品设计
+
+- `com.graduationcamera.pro.monthly`：月卡
+- `com.graduationcamera.pro.yearly`：年卡
+
+### 12.2 月卡 / 年卡建议权益
+
+- **月卡**：双机位同录、高级模板、4K 导出、云端作品管理
+- **年卡**：月卡全部权益 + 团队席位管理、活动模板、优先客服
+
+### 12.3 对接 App Store 的实现要点
+
+- 使用 **StoreKit 2** 的 `Product.products(for:)` 拉取商品。
+- 通过 `purchase()` 发起购买。
+- 通过 `Transaction.currentEntitlements` 刷新当前有效权益。
+- 提供 `AppStore.sync()` 恢复购买能力。
+- 在 App Store Connect 中将月卡/年卡都配置为 **Auto-Renewable Subscriptions**。
+
+### 12.4 用户管理建议
+
+- 首版可采用：
+  - Apple ID 购买身份 + 本地用户资料页
+  - 服务端保存会员态快照、作品数、团队席位数
+- 若后续上云协作：
+  - 使用 Sign in with Apple 作为默认登录方案
+  - 会员态由服务端二次校验，避免仅依赖本地缓存
