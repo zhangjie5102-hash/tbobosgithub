@@ -7,11 +7,12 @@ final class CameraService: NSObject, ObservableObject {
 
     @Published var lastError: String?
     @Published private(set) var usingFrontCamera = false
+    @Published private(set) var flashMode: AVCaptureDevice.FlashMode = .off
 
     private let output = AVCapturePhotoOutput()
     private let sessionQueue = DispatchQueue(label: "camera.session.queue")
     private var currentInput: AVCaptureDeviceInput?
-    private(set) var flashMode: AVCaptureDevice.FlashMode = .off
+    private var isConfigured = false
 
     var flashModeText: String {
         switch flashMode {
@@ -32,6 +33,8 @@ final class CameraService: NSObject, ObservableObject {
     }
 
     func configureSession() {
+        guard !isConfigured else { return }
+
         checkCameraPermission { [weak self] granted in
             guard let self, granted else {
                 self?.publishError("未获得相机权限")
@@ -40,6 +43,7 @@ final class CameraService: NSObject, ObservableObject {
 
             self.sessionQueue.async {
                 self.session.beginConfiguration()
+                defer { self.session.commitConfiguration() }
                 self.session.sessionPreset = .photo
 
                 do {
@@ -58,7 +62,7 @@ final class CameraService: NSObject, ObservableObject {
                     self.publishError("初始化相机失败：\(error.localizedDescription)")
                 }
 
-                self.session.commitConfiguration()
+                self.isConfigured = true
             }
         }
     }
@@ -85,6 +89,7 @@ final class CameraService: NSObject, ObservableObject {
             do {
                 let newInput = try self.makeCamera(position: newPosition)
                 self.session.beginConfiguration()
+                defer { self.session.commitConfiguration() }
                 self.session.removeInput(currentInput)
 
                 if self.session.canAddInput(newInput) {
@@ -97,7 +102,6 @@ final class CameraService: NSObject, ObservableObject {
                     self.session.addInput(currentInput)
                 }
 
-                self.session.commitConfiguration()
             } catch {
                 self.publishError("切换摄像头失败：\(error.localizedDescription)")
             }
@@ -105,11 +109,16 @@ final class CameraService: NSObject, ObservableObject {
     }
 
     func toggleFlashMode() {
+        let nextMode: AVCaptureDevice.FlashMode
         switch flashMode {
-        case .off: flashMode = .on
-        case .on: flashMode = .auto
-        case .auto: flashMode = .off
-        @unknown default: flashMode = .off
+        case .off: nextMode = .on
+        case .on: nextMode = .auto
+        case .auto: nextMode = .off
+        @unknown default: nextMode = .off
+        }
+
+        DispatchQueue.main.async {
+            self.flashMode = nextMode
         }
     }
 
